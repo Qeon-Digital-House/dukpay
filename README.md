@@ -72,6 +72,74 @@ $res['channelAttrs.qrCode'];              // string QRIS
 
 `requestTime`, `callbackUrl`, dan `redirectUrl` diisi otomatis jika tidak dikirim (dari config).
 
+### Cek status payin (query)
+
+Status final payin ditentukan oleh **callback** (lihat bagian [Callback](#callback-notifikasi-asinkron)).
+Gunakan query (`orderQueryV2`) sebagai cadangan: saat create timeout, callback tidak datang,
+user kembali ke `redirectUrl`, atau untuk rekonsiliasi order yang masih `init`.
+
+```php
+use Rrq\Dukpay\Facades\DukPay;
+
+$res = DukPay::payins()->query('INV-2026-0001');   // berdasarkan businessNo
+
+// Menurut dokumen, data berupa ARRAY of object
+$order = $res->data()[0] ?? null;
+
+$order['status'];        // init | success | failed
+$order['orderNo'];       // nomor order DukPay
+$order['orderAmount'];
+$order['currency'];
+$order['channelAttrs'];  // info tambahan per channel
+
+// atau langsung
+$res->data('0.status');
+```
+
+| Status | Arti |
+| --- | --- |
+| `init` | Order dibuat, belum dibayar / masih diproses |
+| `success` | Pembayaran berhasil |
+| `failed` | Pembayaran gagal |
+
+Query payin hanya menerima `businessNo` (bukan `orderNo` DukPay).
+
+Contoh saat user kembali ke `redirectUrl`:
+
+```php
+public function finish(Request $request)
+{
+    $businessNo = $request->query('businessNo');
+    $status = DukPay::payins()->query($businessNo)->data('0.status');
+
+    return match ($status) {
+        'success' => view('payment.success'),
+        'failed'  => view('payment.failed'),
+        default   => view('payment.pending'),   // tunggu callback
+    };
+}
+```
+
+> Parameter di redirect URL (`orderNo`, `businessNo`, `orderAmount`, `currency`) tidak ditandatangani,
+> jadi jangan pakai untuk mengubah status order. Ubah status hanya dari callback atau hasil query.
+
+Contoh rekonsiliasi order `init` dengan scheduler:
+
+```php
+// app/Console/Kernel.php atau routes/console.php
+Schedule::call(function () {
+    Order::where('status', 'pending')
+        ->where('created_at', '<', now()->subMinutes(15))
+        ->each(function (Order $order) {
+            $status = DukPay::payins()->query($order->number)->data('0.status');
+
+            if (in_array($status, ['success', 'failed'], true)) {
+                $order->update(['status' => $status === 'success' ? 'paid' : 'failed']);
+            }
+        });
+})->everyTenMinutes();
+```
+
 ### Payin BANK_TRANSFER Malaysia (dengan bank code)
 
 Malaysia adalah satu-satunya negara yang mewajibkan `properties.bankCode` untuk payin
