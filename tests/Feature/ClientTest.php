@@ -58,8 +58,6 @@ class ClientTest extends TestCase
         DukPay::payins()->query('A');
         DukPay::payins()->createCardOrder(['businessNo' => 'B', 'country' => 'RUS', 'currency' => 'RUB', 'orderAmount' => '1.00', 'properties' => ['clientIp' => '1.1.1.1']]);
         DukPay::payins()->advanceChallenge('tok', 1, ['otp' => '123456']);
-        DukPay::payouts()->create(['businessNo' => 'P', 'country' => 'KOR', 'payoutMethod' => 'BANK_TRANSFER', 'currency' => 'KRW', 'amount' => '100.00', 'customerInfo' => ['accountNo' => '1', 'bankCode' => 'KDB']]);
-        DukPay::payouts()->query('P');
         DukPay::refunds()->create(['businessNo' => 'R', 'sourceOrderNo' => 'T1', 'reason' => 'x']);
         DukPay::refunds()->query(orderNo: 'RF1');
         DukPay::accounts()->create(['businessNo' => 'AC', 'country' => 'RUS', 'currency' => 'RUB', 'purpose' => 'OnInitiate']);
@@ -79,7 +77,7 @@ class ClientTest extends TestCase
         DukPay::finance()->profitSharing('T1');
 
         $this->assertSame([
-            'advanceOrder', 'orderQueryV2', 'challengeOrder', 'challengeOrder', 'payoutCreate', 'payoutQuery',
+            'advanceOrder', 'orderQueryV2', 'challengeOrder', 'challengeOrder',
             'refund', 'refundQuery', 'accountCreate', 'accountCreateV2', 'accountQuery', 'credentialWithhold',
             'credentialWithholdQuery', 'credentialManagement', 'subscriptionCreate', 'subscriptionCancel',
             'subscriptionQuery', 'subscriptionRefund', 'switchSubscriptionPlans', 'accountBalance',
@@ -87,8 +85,8 @@ class ClientTest extends TestCase
         ], array_column($server->received, 'api'));
 
         // V1 account create must not send purpose; V2 keeps it.
-        $this->assertArrayNotHasKey('purpose', $server->received[8]['payload']);
-        $this->assertSame('OnInitiate', $server->received[9]['payload']['purpose']);
+        $this->assertArrayNotHasKey('purpose', $server->received[6]['payload']);
+        $this->assertSame('OnInitiate', $server->received[7]['payload']['purpose']);
 
         // Card order: requestTime as string, BANK_CARD default.
         $this->assertIsString($server->received[2]['payload']['requestTime']);
@@ -100,7 +98,7 @@ class ClientTest extends TestCase
         $this->assertSame('{"otp":"123456"}', (new MerchantAes('merchant-secret-key'))->decryptInput($advance['input']));
 
         // Empty payload is sent as a JSON object.
-        $this->assertSame([], $server->received[19]['payload']);
+        $this->assertSame([], $server->received[17]['payload']);
 
         // Request keys are unique.
         $keys = array_column($server->received, 'requestKey');
@@ -109,14 +107,14 @@ class ClientTest extends TestCase
 
     public function test_non_zero_code_throws_api_exception(): void
     {
-        (new FakeDukPayServer())->fake(fn () => [2014, null, 'payout order already exists']);
+        (new FakeDukPayServer())->fake(fn () => [2012, null, 'AMOUNT_OUT_RANGE']);
 
         try {
-            DukPay::payouts()->create(['businessNo' => 'DUP']);
+            DukPay::payins()->create(['businessNo' => 'BIG', 'orderAmount' => '99999999']);
             $this->fail('Expected exception');
         } catch (DukPayApiException $e) {
-            $this->assertSame(2014, $e->getCode());
-            $this->assertSame('payout order already exists', $e->response->message);
+            $this->assertSame(2012, $e->getCode());
+            $this->assertSame('AMOUNT_OUT_RANGE', $e->response->message);
         }
     }
 

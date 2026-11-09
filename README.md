@@ -253,7 +253,7 @@ Catatan:
 ### Default country & currency
 
 Jika `DUKPAY_COUNTRY` diisi, field `country` dan `currency` boleh dihilangkan dari payload untuk
-`payins()->create()`, `payins()->hostedCheckout()`, `payins()->createCardOrder()`, `payouts()->create()`,
+`payins()->create()`, `payins()->hostedCheckout()`, `payins()->createCardOrder()`,
 `accounts()->create()/createV2()`, dan `accounts()->charge()`.
 
 | Payload | Hasil |
@@ -280,8 +280,6 @@ DukPay::payins()->create([
 | `payins()->query($businessNo)` | `orderQueryV2` | 4.3 |
 | `payins()->createCardOrder($payload)` | `challengeOrder` | 4.1.36.1 |
 | `payins()->advanceChallenge($token, $index, $input)` | `challengeOrder` | 4.1.36.2 |
-| `payouts()->create($payload)` | `payoutCreate` | 4.2 |
-| `payouts()->query($businessNo, $orderNo)` | `payoutQuery` | 4.5 |
 | `refunds()->create($payload)` | `refund` | 6.1 |
 | `refunds()->query($businessNo, $orderNo)` | `refundQuery` | 6.2 |
 | `accounts()->create($payload)` / `createV2($payload)` | `accountCreate` / `accountCreateV2` | 5.1 |
@@ -300,14 +298,13 @@ DukPay::payins()->create([
 | `finance()->profitSharing($orderNo)` | `profitSharingQuery` | 8.4.1 |
 | `DukPay::call($api, $payload)` | apa saja | — |
 
-### Konstanta Country, PaymentMethod & PayoutMethod
+### Konstanta Country & PaymentMethod
 
 Supaya tidak salah ketik, gunakan konstanta di namespace `Rrq\Dukpay\Support`:
 
 ```php
 use Rrq\Dukpay\Support\Country;
 use Rrq\Dukpay\Support\PaymentMethod;
-use Rrq\Dukpay\Support\PayoutMethod;
 
 Country::IDN;                                     // "IDN"
 Country::currency(Country::IDN);                  // "IDR"
@@ -315,9 +312,6 @@ Country::currency(Country::IDN);                  // "IDR"
 PaymentMethod::QRIS;                              // "QRIS"
 PaymentMethod::forCountry(Country::IDN);          // ["OVO", "LINKAJA", "SHOPEEPAY", "DANA", "BANK_TRANSFER", "QRIS"]
 PaymentMethod::supports(Country::IDN, 'DANA');    // true
-
-PayoutMethod::forCountry(Country::IDN);           // ["DANA", "LINKAJA", "SHOPEEPAY", "OVO", "BANK_TRANSFER"]
-PayoutMethod::supports(Country::KOR, PayoutMethod::BANK_TRANSFER); // true
 ```
 
 Contoh validasi di FormRequest:
@@ -369,66 +363,6 @@ per merchant, jadi konfirmasikan ke DukPay metode mana yang aktif untuk akun And
 | `ARE` UAE *(belum didukung)* | AED | `BANK_CARD`, `PAYBY`, `BOTIM_PAY` |
 | `TUR` Turkey *(belum didukung)* | TRY | `BANK_TRANSFER` |
 
-#### Payout (`payoutMethod`)
-
-| Country | Currency | PayoutMethod |
-| --- | --- | --- |
-| `IDN` Indonesia | IDR | `DANA`, `LINKAJA`, `SHOPEEPAY`, `OVO`, `BANK_TRANSFER` |
-| `PHL` Philippines | PHP | `GCASH`, `GRABPAY`, `PAYMAYA`, `BANK_TRANSFER` |
-| `KOR` South Korea | KRW | `BANK_TRANSFER` |
-| `THA` Thailand | THB | `BANK_TRANSFER` |
-| `PAK` Pakistan | PKR | `BANK_TRANSFER`, `EWALLET` |
-| `VNM` Vietnam | VND | `BANK_TRANSFER`, `ZALO_PAY` |
-| `MEX` Mexico | MXN | `BANK_TRANSFER` |
-| `ARE` UAE | AED | `PAYBY` |
-| `BRA` Brazil | BRL | `PIX` |
-| `RUS` Russia | RUB | `YOOMONEY`, `MOBILE_PHONE`, `BANK_CARD`, `SBP` |
-| `KAZ` Kazakhstan | KZT | `BANK_CARD` |
-| `AZE` Azerbaijan | AZN | `BANK_CARD` |
-| `MNG` Mongolia | MNT | `BANK_TRANSFER` |
-| `EGY` Egypt | EGP | `FAWRYPAY`, `BANK_TRANSFER`, `INSTANT_TRANSFER`, `MOBILE_WALLET` |
-| `NGA` Nigeria | NGN | `BANK_TRANSFER` |
-| `TJK` Tajikistan | TJS | `BANK_CARD` |
-| `KGZ` Kyrgyzstan | KGS | `BANK_CARD` |
-| `KEN` Kenya | KES | `BANK_TRANSFER` |
-| `UGA` Uganda | UGX | `BANK_TRANSFER` |
-| `UZB` Uzbekistan *(belum didukung)* | UZS | `BANK_CARD` |
-| `MYS` Malaysia *(belum didukung)* | MYR | `BANK_TRANSFER` |
-
-Kode bank (`bankCode`) untuk payout BANK_TRANSFER berbeda per negara; lihat daftar bank di dokumen DukPay.
-
-### Payout
-
-```php
-use Rrq\Dukpay\Support\PayoutMethod;
-
-DukPay::payouts()->create([
-    'businessNo'   => 'WD-0001',
-    'country'      => Country::KOR,
-    'payoutMethod' => PayoutMethod::BANK_TRANSFER,
-    'currency'     => 'KRW',
-    'amount'       => Resource::amount(10000),   // "10000.00"
-    'customerInfo' => ['accountNo' => '1234567890', 'bankCode' => 'KOOKMIN'],
-]);
-```
-
-Code `2014` (`ResponseCode::PAYOUT_ORDER_EXISTS`) = `businessNo` payout sudah ada:
-
-```php
-use Rrq\Dukpay\Exceptions\DukPayApiException;
-use Rrq\Dukpay\Support\ResponseCode;
-
-try {
-    DukPay::payouts()->create($payload);
-} catch (DukPayApiException $e) {
-    if ($e->getCode() !== ResponseCode::PAYOUT_ORDER_EXISTS) {
-        throw $e;
-    }
-    // 2014: sudah pernah dibuat -> cek statusnya
-    $existing = DukPay::payouts()->query('WD-0001');
-}
-```
-
 ### Bank Card Direct (challenge flow)
 
 ```php
@@ -476,9 +410,8 @@ Event::listen(function (DukPayCallbackReceived $event) {
         CallbackType::PAYMENT_ORDER => Order::where('number', $cb->businessNo())
             ->where('status', 'pending')                       // idempoten
             ->update(['status' => $cb->isSuccess() ? 'paid' : 'failed']),
-        CallbackType::PAYOUT_ORDER => Withdrawal::where('number', $cb->businessNo())
-            ->where('status', 'processing')
-            ->update(['status' => $cb->isSuccess() ? 'done' : 'failed']),
+        CallbackType::REFUND_ORDER  => Refund::where('number', $cb->businessNo())
+            ->update(['status' => $cb->status()]),
         default => null,
     };
 });
@@ -521,15 +454,15 @@ Semua kode tersedia sebagai konstanta `Rrq\Dukpay\Support\ResponseCode`.
 | `2004` | `ORDER_NOT_FOUND` / `ORDER_CREATION_FAILED` | Order not found / Order creation failed | Dokumen memakai kode yang sama untuk dua arti; bedakan dari `message` / konteks API |
 | `2012` | `AMOUNT_OUT_OF_RANGE` | AMOUNT_OUT_RANGE | Nominal di luar batas min / max |
 | `2013` | `UNSUPPORTED_PAYMENT_METHOD_ALT` | UNSUPPORTED_PAYMENT_METHOD | Sama dengan `2003` |
-| `2014` | `PAYOUT_ORDER_EXISTS` | payout order already exists | `businessNo` payout sudah dipakai |
-| `2015` | `BALANCE_NOT_ENOUGH` | balance not enough | Saldo tidak cukup untuk payout |
+| `2014` | `PAYOUT_ORDER_EXISTS` | payout order already exists | Khusus payout (tidak dipakai package ini) |
+| `2015` | `BALANCE_NOT_ENOUGH` | balance not enough | Khusus payout (tidak dipakai package ini) |
 
 Helper:
 
 ```php
 use Rrq\Dukpay\Support\ResponseCode;
 
-ResponseCode::message(2015);                     // "balance not enough"
+ResponseCode::message(2012);                     // "AMOUNT_OUT_RANGE"
 ResponseCode::isUnsupportedPaymentMethod($code);  // true untuk 2003 dan 2013
 ```
 
@@ -540,10 +473,9 @@ use Rrq\Dukpay\Exceptions\DukPayApiException;
 use Rrq\Dukpay\Support\ResponseCode;
 
 try {
-    DukPay::payouts()->create($payload);
+    DukPay::payins()->create($payload);
 } catch (DukPayApiException $e) {
     match (true) {
-        $e->getCode() === ResponseCode::BALANCE_NOT_ENOUGH  => throw new InsufficientBalance(),
         $e->getCode() === ResponseCode::AMOUNT_OUT_OF_RANGE => throw ValidationException::withMessages(['amount' => 'Nominal di luar batas.']),
         ResponseCode::isUnsupportedPaymentMethod($e->getCode()) => throw ValidationException::withMessages(['method' => 'Metode tidak didukung.']),
         default => throw $e,
@@ -556,10 +488,8 @@ try {
 - RSA-OAEP memakai `phpseclib/phpseclib` v3 karena `ext-openssl` PHP hanya mendukung OAEP SHA-1,
   sedangkan DukPay memakai OAEP SHA-256 / MGF1 SHA-256.
 - Implementasi crypto sudah diuji bolak-balik terhadap contoh kode Node.js resmi di dokumen (bagian 3.10).
-- Bagian 4.2.1 (*Query Available payout Balance*) di dokumen menulis `X-DUKPAY-API: payoutCreate`,
-  yang kemungkinan salah ketik, jadi belum dibuatkan method khusus. Setelah nama API dikonfirmasi ke
-  DukPay, panggil dengan `DukPay::call('<nama-api>', ['country' => ..., 'payoutMethod' => ..., 'currency' => ...])`.
-  Untuk saldo umum gunakan `finance()->balance()`.
+- Fitur **payout** (`payoutCreate`, `payoutQuery`) sengaja tidak disertakan karena tidak dipakai.
+  Jika suatu saat diperlukan, panggil lewat `DukPay::call('payoutCreate', [...])` atau tambahkan resource-nya.
 
 ## Testing
 

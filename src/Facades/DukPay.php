@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @method static \Rrq\Dukpay\DukPayClient client()
  * @method static \Rrq\Dukpay\Resources\Payins payins()
- * @method static \Rrq\Dukpay\Resources\Payouts payouts()
  * @method static \Rrq\Dukpay\Resources\Refunds refunds()
  * @method static \Rrq\Dukpay\Resources\Accounts accounts()
  * @method static \Rrq\Dukpay\Resources\Subscriptions subscriptions()

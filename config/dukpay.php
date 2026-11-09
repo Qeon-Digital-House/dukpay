@@ -66,7 +66,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | ISO alpha-3 country (e.g. IDN) and currency (e.g. IDR). Injected into
-    | payin, hosted checkout, card order, payout, account create and
+    | payin, hosted checkout, card order, account create and
     | credential charge requests when "country" / "currency" are omitted.
     | When currency is empty it is derived from the country
     | (Rrq\Dukpay\Support\Country::currency()). Values passed in the

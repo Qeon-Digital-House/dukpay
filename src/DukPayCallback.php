@@ -53,11 +53,6 @@ final class DukPayCallback implements Arrayable
         return $this->is(CallbackType::PAYMENT_ORDER);
     }
 
-    public function isPayout(): bool
-    {
-        return $this->is(CallbackType::PAYOUT_ORDER);
-    }
-
     public function isRefund(): bool
     {
         return $this->is(CallbackType::REFUND_ORDER);

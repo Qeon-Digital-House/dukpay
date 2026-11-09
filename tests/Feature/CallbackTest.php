@@ -58,7 +58,7 @@ class CallbackTest extends TestCase
     {
         Event::listen(DukPayCallbackReceived::class, fn () => throw new \RuntimeException('db down'));
 
-        [$body, $headers] = (new FakeDukPayServer())->callback(['status' => 'success'], 'payout_order');
+        [$body, $headers] = (new FakeDukPayServer())->callback(['status' => 'success'], 'payment_order');
 
         $this->postCallback($body, $headers)->assertStatus(500);
     }

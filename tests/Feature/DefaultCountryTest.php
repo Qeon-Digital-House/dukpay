@@ -20,7 +20,6 @@ class DefaultCountryTest extends TestCase
         $server = (new FakeDukPayServer())->fake();
 
         DukPay::payins()->create(['businessNo' => 'A', 'paymentMethod' => 'QRIS', 'orderAmount' => '10000']);
-        DukPay::payouts()->create(['businessNo' => 'B', 'payoutMethod' => 'DANA', 'amount' => '10000.00']);
         DukPay::payins()->hostedCheckout(['businessNo' => 'C', 'orderAmount' => '1.00']);
         DukPay::accounts()->create(['businessNo' => 'D']);
         DukPay::accounts()->charge(['credential' => 'c', 'businessNo' => 'E', 'orderAmount' => 1]);

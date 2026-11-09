@@ -7,12 +7,11 @@ use Rrq\Dukpay\Crypto\MerchantAes;
 use Rrq\Dukpay\Resources\Accounts;
 use Rrq\Dukpay\Resources\Finance;
 use Rrq\Dukpay\Resources\Payins;
-use Rrq\Dukpay\Resources\Payouts;
 use Rrq\Dukpay\Resources\Refunds;
 use Rrq\Dukpay\Resources\Subscriptions;
 
 /**
- * Entry point: DukPay::payins()->create([...]), DukPay::payouts()->query(...), etc.
+ * Entry point: DukPay::payins()->create([...]), DukPay::payins()->query(...), etc.
  */
 class DukPay
 {
@@ -32,11 +31,6 @@ class DukPay
     public function payins(): Payins
     {
         return new Payins($this->client, $this->defaults, $this->merchantAes);
-    }
-
-    public function payouts(): Payouts
-    {
-        return new Payouts($this->client, $this->defaults);
     }
 
     public function refunds(): Refunds

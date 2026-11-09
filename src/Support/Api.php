@@ -11,10 +11,6 @@ final class Api
     public const CHALLENGE_ORDER = 'challengeOrder';
     public const ORDER_QUERY = 'orderQueryV2';
 
-    // Payout
-    public const PAYOUT_CREATE = 'payoutCreate';
-    public const PAYOUT_QUERY = 'payoutQuery';
-
     // Refund
     public const REFUND = 'refund';
     public const REFUND_QUERY = 'refundQuery';

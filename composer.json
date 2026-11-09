@@ -3,7 +3,7 @@
     "description": "Laravel payment provider for the DukPay Merchant API (Security Authentication V2: RSA2 signatures + RSA-OAEP/AES-256-GCM hybrid encryption).",
     "type": "library",
     "license": "MIT",
-    "keywords": ["laravel", "dukpay", "payment", "payment-gateway", "payin", "payout"],
+    "keywords": ["laravel", "dukpay", "payment", "payment-gateway", "payin"],
     "authors": [
         {
             "name": "Kiki Kurniawan",
