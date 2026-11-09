@@ -50,13 +50,15 @@ atau `['throw' => false]` pada `DukPay::call()`).
 ```php
 use Rrq\Dukpay\Facades\DukPay;
 use Rrq\Dukpay\Resources\Resource;
+use Rrq\Dukpay\Support\Country;
+use Rrq\Dukpay\Support\PaymentMethod;
 
 // Payin Indonesia (QRIS / DANA / OVO / SHOPEEPAY / LINKAJA / BANK_TRANSFER)
 $res = DukPay::payins()->create([
     'businessNo'    => 'INV-2026-0001',
-    'paymentMethod' => 'QRIS',
-    'country'       => 'IDN',
-    'currency'      => 'IDR',
+    'paymentMethod' => PaymentMethod::QRIS,
+    'country'       => Country::IDN,
+    'currency'      => Country::currency(Country::IDN),   // "IDR"
     'orderAmount'   => '50000',
     'properties'    => ['email' => 'buyer@example.com', 'language' => 'ID'],
 ]);
@@ -97,13 +99,112 @@ $res['channelAttrs.qrCode'];              // string QRIS
 | `finance()->profitSharing($orderNo)` | `profitSharingQuery` | 8.4.1 |
 | `DukPay::call($api, $payload)` | apa saja | — |
 
+### Konstanta Country, PaymentMethod & PayoutMethod
+
+Supaya tidak salah ketik, gunakan konstanta di namespace `Rrq\Dukpay\Support`:
+
+```php
+use Rrq\Dukpay\Support\Country;
+use Rrq\Dukpay\Support\PaymentMethod;
+use Rrq\Dukpay\Support\PayoutMethod;
+
+Country::IDN;                                     // "IDN"
+Country::currency(Country::IDN);                  // "IDR"
+
+PaymentMethod::QRIS;                              // "QRIS"
+PaymentMethod::forCountry(Country::IDN);          // ["OVO", "LINKAJA", "SHOPEEPAY", "DANA", "BANK_TRANSFER", "QRIS"]
+PaymentMethod::supports(Country::IDN, 'DANA');    // true
+
+PayoutMethod::forCountry(Country::IDN);           // ["DANA", "LINKAJA", "SHOPEEPAY", "OVO", "BANK_TRANSFER"]
+PayoutMethod::supports(Country::KOR, PayoutMethod::BANK_TRANSFER); // true
+```
+
+Contoh validasi di FormRequest:
+
+```php
+use Illuminate\Validation\Rule;
+
+'payment_method' => ['required', Rule::in(PaymentMethod::forCountry(Country::IDN))],
+```
+
+Daftar ini disalin dari DukPay Merchant API Integration Guide v3. Aktivasi metode bisa berbeda
+per merchant, jadi konfirmasikan ke DukPay metode mana yang aktif untuk akun Anda.
+
+#### Payin (`paymentMethod`)
+
+| Country | Currency | PaymentMethod |
+| --- | --- | --- |
+| `IDN` Indonesia | IDR | `OVO`, `LINKAJA`, `SHOPEEPAY`, `DANA`, `BANK_TRANSFER`, `QRIS` |
+| `BRA` Brazil | BRL | `PIX`, `BOLETO`, `BANK_TRANSFER`, `CASH` |
+| `PHL` Philippines | PHP | `GCASH`, `PAYMAYA`, `GRABPAY`, `BANK_CARD`, `QRPH` |
+| `MEX` Mexico | MXN | `BANK_TRANSFER`, `CREDIT_CARD`, `CASH` |
+| `RUS` Russia | RUB / USD | `BANK_CARD`, `YOOMONEY`, `SBER_PAY`, `TINKOFF_PAY`, `SBP`, `DCB` |
+| `BLR` Belarus | RUB / USD | `BANK_CARD` (elcard) |
+| `VNM` Vietnam | VND | `ZALO_PAY`, `BANK_CARD`, `BANK_TRANSFER`, `VTC_PAY`, `VIET_QR`, `VN_PAY` |
+| `PAK` Pakistan | PKR | `EASYPAISA`, `JAZZ_CASH` |
+| `KOR` South Korea | KRW | `CREDIT_CARD`, `BANK_TRANSFER`, `DCB`, `PAYCO`, `KAKAO`, `NAVER_PAY`, `TMONEY_PAY`, `SSPAY` |
+| `COL` Colombia | COP | `PSE`, `CREDIT_CARD`, `EFECTY`, `BANK_TRANSFER`, `CASH` |
+| `THA` Thailand | THB | `LINE_PAY`, `TRUE_MONEY`, `SHOPEEPAY`, `WECHAT_PAY`, `PROMPT_PAY` |
+| `SAU` Saudi Arabia | SAR | `TABBY`, `APPLE_PAY`, `BANK_CARD`, `STCPAY`, `TAMARA` |
+| `CHL` Chile | CLP | `WEB_PAY`, `KHIPU`, `MACH`, `HITES`, `BANK_TRANSFER` |
+| `SGP` Singapore | SGD | `PAY_NOW` |
+| `TZA` Tanzania | TZS | `MOBILE_MONEY` |
+| `KEN` Kenya | KES | `MOBILE_MONEY`, `BANK_CARD` |
+| `UGA` Uganda | UGX | `MOBILE_MONEY` |
+| `EGY` Egypt | EGP | `FAWRYPAY`, `BANK_CARD`, `MOBILE_WALLET` |
+| `KAZ` Kazakhstan | KZT | `BANK_CARD` |
+| `NGA` Nigeria | NGN | `BANK_CARD` |
+| `GHA` Ghana | GHS | `BANK_CARD` |
+| `ZAF` South Africa | ZAR | `BANK_CARD` |
+| `ARG` Argentina | ARS | `BANK_TRANSFER`, `CASH` |
+| `PER` Peru | PEN | `BANK_TRANSFER`, `CASH`, `PAGO_EFECTIVO_QR` |
+| `UZB` Uzbekistan | UZS | `BANK_CARD`, `UZUM_BANK` |
+| `MYS` Malaysia | MYR | `BANK_TRANSFER`, `DUITNOW_QR` |
+| `MNG` Mongolia | MNT | `BANK_CARD`, `QPAY` |
+| `BGD` Bangladesh | BDT | `NAGAD`, `BKASH` |
+| `NPL` Nepal | NPR | `KHALTI` |
+| `JPN` Japan | JPY | `KONBINI`, `PAYPAY`, `PAIDY`, `BANK_CARD`, `BANK_TRANSFER` |
+| `ARM` Armenia | AMD | `FASTSHIFT` |
+| `ARE` UAE *(belum didukung)* | AED | `BANK_CARD`, `PAYBY`, `BOTIM_PAY` |
+| `TUR` Turkey *(belum didukung)* | TRY | `BANK_TRANSFER` |
+
+#### Payout (`payoutMethod`)
+
+| Country | Currency | PayoutMethod |
+| --- | --- | --- |
+| `IDN` Indonesia | IDR | `DANA`, `LINKAJA`, `SHOPEEPAY`, `OVO`, `BANK_TRANSFER` |
+| `PHL` Philippines | PHP | `GCASH`, `GRABPAY`, `PAYMAYA`, `BANK_TRANSFER` |
+| `KOR` South Korea | KRW | `BANK_TRANSFER` |
+| `THA` Thailand | THB | `BANK_TRANSFER` |
+| `PAK` Pakistan | PKR | `BANK_TRANSFER`, `EWALLET` |
+| `VNM` Vietnam | VND | `BANK_TRANSFER`, `ZALO_PAY` |
+| `MEX` Mexico | MXN | `BANK_TRANSFER` |
+| `ARE` UAE | AED | `PAYBY` |
+| `BRA` Brazil | BRL | `PIX` |
+| `RUS` Russia | RUB | `YOOMONEY`, `MOBILE_PHONE`, `BANK_CARD`, `SBP` |
+| `KAZ` Kazakhstan | KZT | `BANK_CARD` |
+| `AZE` Azerbaijan | AZN | `BANK_CARD` |
+| `MNG` Mongolia | MNT | `BANK_TRANSFER` |
+| `EGY` Egypt | EGP | `FAWRYPAY`, `BANK_TRANSFER`, `INSTANT_TRANSFER`, `MOBILE_WALLET` |
+| `NGA` Nigeria | NGN | `BANK_TRANSFER` |
+| `TJK` Tajikistan | TJS | `BANK_CARD` |
+| `KGZ` Kyrgyzstan | KGS | `BANK_CARD` |
+| `KEN` Kenya | KES | `BANK_TRANSFER` |
+| `UGA` Uganda | UGX | `BANK_TRANSFER` |
+| `UZB` Uzbekistan *(belum didukung)* | UZS | `BANK_CARD` |
+| `MYS` Malaysia *(belum didukung)* | MYR | `BANK_TRANSFER` |
+
+Kode bank (`bankCode`) untuk payout BANK_TRANSFER berbeda per negara; lihat daftar bank di dokumen DukPay.
+
 ### Payout
 
 ```php
+use Rrq\Dukpay\Support\PayoutMethod;
+
 DukPay::payouts()->create([
     'businessNo'   => 'WD-0001',
-    'country'      => 'KOR',
-    'payoutMethod' => 'BANK_TRANSFER',
+    'country'      => Country::KOR,
+    'payoutMethod' => PayoutMethod::BANK_TRANSFER,
     'currency'     => 'KRW',
     'amount'       => Resource::amount(10000),   // "10000.00"
     'customerInfo' => ['accountNo' => '1234567890', 'bankCode' => 'KOOKMIN'],
