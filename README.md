@@ -90,7 +90,7 @@ $res = DukPay::payins()->create([
     'orderAmount'   => '100.00',
     'properties'    => [
         'bankCode' => 'CIBBMYKL',         // CIMB Bank (RPP), sama di test & production
-        'clientIp' => $request->ip(),      // wajib
+        'clientIp' => $data['ip_address'], // wajib, lihat "IP user (clientIp)"
     ],
 ]);
 
@@ -117,6 +117,70 @@ Kode bank Malaysia **berbeda antara test dan production**. Ambil dari dokumen Du
 Production punya ~85 bank, test ~47 bank; daftar lengkap ada di dokumen DukPay.
 
 Gunakan `PaymentMethod::DUITNOW_QR` jika tidak ingin user memilih bank (tanpa `bankCode`).
+
+### IP user (`clientIp`)
+
+Beberapa request DukPay mewajibkan IP user:
+
+| API / negara | Field |
+| --- | --- |
+| Payin Russia, Belarus, Malaysia | `properties.clientIp` |
+| Bank Card Direct (`createCardOrder`) | `properties.clientIp` |
+| Create Account V1/V2 | `properties.deviceInfo.ip` |
+| Create Account Russia | `properties.clientIp` |
+
+Package tidak membaca header / `$request->ip()` sendiri; IP diambil dari payload yang Anda kirim.
+Jika frontend meneruskan IP user lewat header `x-real-api`, ambil dari header tersebut, validasi,
+lalu simpan sebagai `ip_address`:
+
+```php
+use Illuminate\Http\Request;
+use Rrq\Dukpay\Facades\DukPay;
+use Rrq\Dukpay\Support\Country;
+use Rrq\Dukpay\Support\PaymentMethod;
+
+public function createTransaction(Request $request)
+{
+    $data = $request->all();
+
+    // IP user dari header x-real-api (dikirim frontend); null jika kosong / bukan IP valid
+    $data['ip_address'] = filter_var($request->header('x-real-api'), FILTER_VALIDATE_IP) ?: null;
+
+    // ... simpan transaksi, termasuk kolom ip_address ...
+
+    $res = DukPay::payins()->create([
+        'businessNo'    => $data['transaction_id'],
+        'paymentMethod' => PaymentMethod::BANK_TRANSFER,
+        'country'       => Country::MYS,
+        'orderAmount'   => '100.00',
+        'properties'    => [
+            'bankCode' => 'CIBBMYKL',
+            'clientIp' => $data['ip_address'],
+        ],
+    ]);
+}
+```
+
+Create Account memakai `deviceInfo.ip`:
+
+```php
+DukPay::accounts()->create([
+    'businessNo' => 'ACC-0001',
+    'country'    => Country::RUS,
+    'properties' => [
+        'clientIp'   => $data['ip_address'],
+        'os'         => 'Android',
+        'deviceInfo' => ['deviceId' => $deviceId, 'ip' => $data['ip_address']],
+    ],
+]);
+```
+
+Catatan:
+- Untuk negara yang mewajibkan `clientIp`, pastikan `ip_address` tidak `null` sebelum memanggil
+  DukPay; jika kosong, DukPay kemungkinan menolak dengan `1000 param error`.
+- Header `x-real-api` bisa dipalsukan jika API dapat diakses langsung dari internet. Pastikan header
+  hanya diisi oleh frontend / proxy tepercaya.
+- Dokumen DukPay tidak menyebut dukungan IPv6; konfirmasikan ke DukPay jika user bisa memakai IPv6.
 
 ### Default country & currency
 
@@ -303,7 +367,7 @@ try {
 // 1. Buat order (tanpa data kartu)
 $res = DukPay::payins()->createCardOrder([
     'businessNo' => 'CARD-0001', 'country' => 'RUS', 'currency' => 'RUB',
-    'orderAmount' => '100.00', 'properties' => ['clientIp' => $request->ip()],
+    'orderAmount' => '100.00', 'properties' => ['clientIp' => $data['ip_address']],
 ]);
 $token = $res->data('token');
 $next  = $res->data('action.nextIndex');
