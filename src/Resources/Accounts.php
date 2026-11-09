@@ -23,7 +23,7 @@ class Accounts extends Resource
             unset($payload['purpose']);
         }
 
-        return $this->call($v2 ? Api::ACCOUNT_CREATE_V2 : Api::ACCOUNT_CREATE, $this->withRedirectUrl($this->withCallbackUrl($payload)));
+        return $this->call($v2 ? Api::ACCOUNT_CREATE_V2 : Api::ACCOUNT_CREATE, $this->withRedirectUrl($this->withCallbackUrl($this->withCountry($payload))));
     }
 
     /** Shortcut for create($payload, v2: true). */
@@ -49,7 +49,7 @@ class Accounts extends Resource
      */
     public function charge(array $payload): DukPayResponse
     {
-        return $this->call(Api::CREDENTIAL_WITHHOLD, $this->withCallbackUrl($payload));
+        return $this->call(Api::CREDENTIAL_WITHHOLD, $this->withCallbackUrl($this->withCountry($payload)));
     }
 
     /** Query a credential-based charge (credentialWithholdQuery). */

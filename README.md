@@ -27,6 +27,8 @@ DUKPAY_PUBLIC_KEY=MIIBIjANBgkqhkiG9w0B...           # Base64 X.509 DER satu bari
 DUKPAY_PRODUCT_ID=                                 # opsional (X-PRODUCT-ID)
 DUKPAY_CALLBACK_URL=https://shop.example.com/dukpay/callback   # default callbackUrl
 DUKPAY_REDIRECT_URL=https://shop.example.com/payment/finish     # default redirectUrl
+DUKPAY_COUNTRY=IDN                                 # default country (opsional)
+DUKPAY_CURRENCY=                                   # default currency (opsional, kosong = ikut country)
 ```
 
 ### Membuat key merchant
@@ -69,6 +71,27 @@ $res['channelAttrs.qrCode'];              // string QRIS
 ```
 
 `requestTime`, `callbackUrl`, dan `redirectUrl` diisi otomatis jika tidak dikirim (dari config).
+
+### Default country & currency
+
+Jika `DUKPAY_COUNTRY` diisi, field `country` dan `currency` boleh dihilangkan dari payload untuk
+`payins()->create()`, `payins()->hostedCheckout()`, `payins()->createCardOrder()`, `payouts()->create()`,
+`accounts()->create()/createV2()`, dan `accounts()->charge()`.
+
+| Payload | Hasil |
+| --- | --- |
+| tanpa `country` & `currency` | `country` = `DUKPAY_COUNTRY`, `currency` = `DUKPAY_CURRENCY` atau mata uang default negara tsb |
+| `country` lain (mis. `KOR`), tanpa `currency` | `currency` = mata uang negara itu (`KRW`), bukan `DUKPAY_CURRENCY` |
+| `country` & `currency` diisi | dipakai apa adanya |
+
+```php
+// .env: DUKPAY_COUNTRY=IDN
+DukPay::payins()->create([
+    'businessNo'    => 'INV-2026-0002',
+    'paymentMethod' => PaymentMethod::DANA,
+    'orderAmount'   => '25000',            // country=IDN, currency=IDR terisi otomatis
+]);
+```
 
 ### Daftar method
 

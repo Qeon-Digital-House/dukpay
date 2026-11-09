@@ -42,6 +42,8 @@ class DukPayServiceProvider extends ServiceProvider
                 [
                     'callback_url' => $config['callback_url'] ?? null,
                     'redirect_url' => $config['redirect_url'] ?? null,
+                    'country' => $config['country'] ?? null,
+                    'currency' => $config['currency'] ?? null,
                 ],
             );
         });

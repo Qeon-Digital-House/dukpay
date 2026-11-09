@@ -16,7 +16,7 @@ class Payouts extends Resource
      */
     public function create(array $payload): DukPayResponse
     {
-        return $this->call(Api::PAYOUT_CREATE, $this->withRequestTime($this->withCallbackUrl($payload)));
+        return $this->call(Api::PAYOUT_CREATE, $this->withRequestTime($this->withCallbackUrl($this->withCountry($payload))));
     }
 
     /** Query a payout by DukPay orderNo and/or merchant businessNo (payoutQuery). */

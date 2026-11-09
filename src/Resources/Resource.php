@@ -4,10 +4,11 @@ namespace Rrq\Dukpay\Resources;
 
 use Rrq\Dukpay\DukPayClient;
 use Rrq\Dukpay\DukPayResponse;
+use Rrq\Dukpay\Support\Country;
 
 abstract class Resource
 {
-    /** @param array{callback_url?: ?string, redirect_url?: ?string} $defaults */
+    /** @param array{callback_url?: ?string, redirect_url?: ?string, country?: ?string, currency?: ?string} $defaults */
     public function __construct(
         protected readonly DukPayClient $client,
         protected readonly array $defaults = [],
@@ -38,6 +39,37 @@ abstract class Resource
     {
         if (empty($payload['redirectUrl']) && ! empty($this->defaults['redirect_url'])) {
             $payload['redirectUrl'] = $this->defaults['redirect_url'];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Fill in country / currency from config when not provided.
+     *
+     * country  = payload ?? config('dukpay.country')
+     * currency = payload ?? config('dukpay.currency') (only when country is the configured one)
+     *                    ?? Country::currency(country)
+     */
+    protected function withCountry(array $payload): array
+    {
+        $defaultCountry = $this->defaults['country'] ?? null;
+        $defaultCurrency = $this->defaults['currency'] ?? null;
+
+        if (empty($payload['country']) && ! empty($defaultCountry)) {
+            $payload['country'] = strtoupper($defaultCountry);
+        }
+
+        if (empty($payload['currency']) && ! empty($payload['country'])) {
+            $country = strtoupper((string) $payload['country']);
+
+            $currency = ! empty($defaultCurrency) && $country === strtoupper((string) $defaultCountry)
+                ? strtoupper($defaultCurrency)
+                : Country::currency($country);
+
+            if ($currency !== null) {
+                $payload['currency'] = $currency;
+            }
         }
 
         return $payload;

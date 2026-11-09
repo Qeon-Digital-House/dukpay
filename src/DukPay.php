@@ -16,7 +16,7 @@ use Rrq\Dukpay\Resources\Subscriptions;
  */
 class DukPay
 {
-    /** @param array{callback_url?: ?string, redirect_url?: ?string} $defaults */
+    /** @param array{callback_url?: ?string, redirect_url?: ?string, country?: ?string, currency?: ?string} $defaults */
     public function __construct(
         private readonly DukPayClient $client,
         private readonly MerchantAes $merchantAes,

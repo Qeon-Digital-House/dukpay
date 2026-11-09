@@ -24,7 +24,7 @@ class Payins extends Resource
      */
     public function create(array $payload): DukPayResponse
     {
-        return $this->call(Api::ORDER_CREATE, $this->withRequestTime($this->withRedirectUrl($this->withCallbackUrl($payload))));
+        return $this->call(Api::ORDER_CREATE, $this->withRequestTime($this->withRedirectUrl($this->withCallbackUrl($this->withCountry($payload)))));
     }
 
     /**
@@ -34,7 +34,7 @@ class Payins extends Resource
      */
     public function hostedCheckout(array $payload): DukPayResponse
     {
-        return $this->call(Api::HOSTED_CHECKOUT, $this->withRequestTime($this->withRedirectUrl($this->withCallbackUrl($payload))));
+        return $this->call(Api::HOSTED_CHECKOUT, $this->withRequestTime($this->withRedirectUrl($this->withCallbackUrl($this->withCountry($payload)))));
     }
 
     /** Query a payin order by merchant order number (orderQueryV2). */
@@ -54,7 +54,7 @@ class Payins extends Resource
     {
         $payload += ['paymentMethod' => 'BANK_CARD'];
 
-        return $this->call(Api::CHALLENGE_ORDER, $this->withRequestTime($this->withRedirectUrl($this->withCallbackUrl($payload)), true));
+        return $this->call(Api::CHALLENGE_ORDER, $this->withRequestTime($this->withRedirectUrl($this->withCallbackUrl($this->withCountry($payload))), true));
     }
 
     /**
