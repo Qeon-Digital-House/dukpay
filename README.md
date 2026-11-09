@@ -72,6 +72,52 @@ $res['channelAttrs.qrCode'];              // string QRIS
 
 `requestTime`, `callbackUrl`, dan `redirectUrl` diisi otomatis jika tidak dikirim (dari config).
 
+### Payin BANK_TRANSFER Malaysia (dengan bank code)
+
+Malaysia adalah satu-satunya negara yang mewajibkan `properties.bankCode` untuk payin
+`BANK_TRANSFER`. Negara lain (mis. Indonesia) tidak menerima bank code di request.
+
+```php
+use Rrq\Dukpay\Facades\DukPay;
+use Rrq\Dukpay\Support\Country;
+use Rrq\Dukpay\Support\PaymentMethod;
+
+$res = DukPay::payins()->create([
+    'businessNo'    => 'INV-MY-0001',
+    'paymentMethod' => PaymentMethod::BANK_TRANSFER,
+    'country'       => Country::MYS,
+    'currency'      => 'MYR',
+    'orderAmount'   => '100.00',
+    'properties'    => [
+        'bankCode' => 'CIBBMYKL',         // CIMB Bank (RPP), sama di test & production
+        'clientIp' => $request->ip(),      // wajib
+    ],
+]);
+
+return redirect()->away($res->data('channelAttrs.checkoutUrl'));
+```
+
+Kode bank Malaysia **berbeda antara test dan production**. Ambil dari dokumen DukPay bagian
+4.1.28.1 (production) / 4.1.28.2 (test). Contoh:
+
+| Bank | Production | Test |
+| --- | --- | --- |
+| Affin Bank (FPX) | `ABB0233` | — |
+| Affin Bank (RPP) | `PHBMMYKL` | `PHBMMYKL` |
+| Alliance Bank (FPX) | `ABMB0212` | — |
+| Alliance Bank (RPP) | `MFBBMYKL` | `MFBBMYKL` |
+| CIMB Bank (FPX) | `BCBB0235` | `BCBB0235` |
+| CIMB Bank (RPP) | `CIBBMYKL` | `CIBBMYKL` |
+| Bank Islam (FPX) | `BIMB0340` | `BIMB0340` |
+| Agro Bank (FPX) | `AGRO01` | — |
+| Agro Bank (RPP) | `AGOBMYKL` | `AGOBMYKL` |
+| PYN Bank A (RPP) | — | `ACFBMYK1` |
+| PYN Bank B (RPP) | — | `HLFBMYK1` |
+
+Production punya ~85 bank, test ~47 bank; daftar lengkap ada di dokumen DukPay.
+
+Gunakan `PaymentMethod::DUITNOW_QR` jika tidak ingin user memilih bank (tanpa `bankCode`).
+
 ### Default country & currency
 
 Jika `DUKPAY_COUNTRY` diisi, field `country` dan `currency` boleh dihilangkan dari payload untuk
