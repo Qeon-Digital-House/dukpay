@@ -234,15 +234,16 @@ DukPay::payouts()->create([
 ]);
 ```
 
-Code `2014` = `businessNo` payout sudah ada:
+Code `2014` (`ResponseCode::PAYOUT_ORDER_EXISTS`) = `businessNo` payout sudah ada:
 
 ```php
 use Rrq\Dukpay\Exceptions\DukPayApiException;
+use Rrq\Dukpay\Support\ResponseCode;
 
 try {
     DukPay::payouts()->create($payload);
 } catch (DukPayApiException $e) {
-    if ($e->getCode() !== 2014) {
+    if ($e->getCode() !== ResponseCode::PAYOUT_ORDER_EXISTS) {
         throw $e;
     }
     // 2014: sudah pernah dibuat -> cek statusnya
@@ -319,9 +320,58 @@ Nilai `callback-type`: `payment_order`, `payout_order`, `refund_order`, `subscri
 - Create order sukses **bukan** berarti user sudah bayar. Status final dari callback; jika callback
   tidak datang / timeout, lakukan `query`.
 - Redirect URL hanya untuk tampilan; jangan dipakai sebagai bukti pembayaran.
-- Kode error umum: `1000` param error, `1001` signature error, `1002` request expired,
-  `1003` system error, `1004` auth failed, `1005` no permission, `1006` api not found,
-  `1010` channel service error, `1011` config or param error, `2001` no available account.
+- Kode response lengkap ada di bagian [Kode response](#kode-response).
+
+## Kode response
+
+Semua kode tersedia sebagai konstanta `Rrq\Dukpay\Support\ResponseCode`.
+
+| Code | Konstanta | Message | Keterangan |
+| --- | --- | --- | --- |
+| `0` | `SUCCESS` | success | Berhasil |
+| `1000` | `PARAM_ERROR` | param error | Parameter request salah / kurang |
+| `1001` | `SIGNATURE_ERROR` | signature error | Signature tidak valid (key salah / isi signature tidak sesuai) |
+| `1002` | `REQUEST_EXPIRED` | request expired | Request kedaluwarsa; pastikan jam server sinkron (NTP) |
+| `1003` | `SYSTEM_ERROR` | system error | Error di sisi DukPay |
+| `1004` | `AUTH_FAILED` | auth failed | SecretId salah / V2 belum aktif |
+| `1005` | `NO_PERMISSION` | no permission | Merchant tidak punya izin untuk API / fitur tsb |
+| `1006` | `API_NOT_FOUND` | api not found | Nilai `X-DUKPAY-API` tidak dikenal |
+| `1010` | `CHANNEL_SERVICE_ERROR` | channel service error | Error dari channel (bank / e-wallet) |
+| `1011` | `CONFIG_OR_PARAM_ERROR` | config or param error | Konfigurasi merchant / parameter tidak cocok |
+| `2001` | `NO_AVAILABLE_ACCOUNT` | No available account | Tidak ada akun / channel tersedia |
+| `2003` | `UNSUPPORTED_PAYMENT_METHOD` | Unsupported payment method | Metode pembayaran tidak didukung |
+| `2004` | `ORDER_NOT_FOUND` / `ORDER_CREATION_FAILED` | Order not found / Order creation failed | Dokumen memakai kode yang sama untuk dua arti; bedakan dari `message` / konteks API |
+| `2012` | `AMOUNT_OUT_OF_RANGE` | AMOUNT_OUT_RANGE | Nominal di luar batas min / max |
+| `2013` | `UNSUPPORTED_PAYMENT_METHOD_ALT` | UNSUPPORTED_PAYMENT_METHOD | Sama dengan `2003` |
+| `2014` | `PAYOUT_ORDER_EXISTS` | payout order already exists | `businessNo` payout sudah dipakai |
+| `2015` | `BALANCE_NOT_ENOUGH` | balance not enough | Saldo tidak cukup untuk payout |
+
+Helper:
+
+```php
+use Rrq\Dukpay\Support\ResponseCode;
+
+ResponseCode::message(2015);                     // "balance not enough"
+ResponseCode::isUnsupportedPaymentMethod($code);  // true untuk 2003 dan 2013
+```
+
+Contoh penanganan:
+
+```php
+use Rrq\Dukpay\Exceptions\DukPayApiException;
+use Rrq\Dukpay\Support\ResponseCode;
+
+try {
+    DukPay::payouts()->create($payload);
+} catch (DukPayApiException $e) {
+    match (true) {
+        $e->getCode() === ResponseCode::BALANCE_NOT_ENOUGH  => throw new InsufficientBalance(),
+        $e->getCode() === ResponseCode::AMOUNT_OUT_OF_RANGE => throw ValidationException::withMessages(['amount' => 'Nominal di luar batas.']),
+        ResponseCode::isUnsupportedPaymentMethod($e->getCode()) => throw ValidationException::withMessages(['method' => 'Metode tidak didukung.']),
+        default => throw $e,
+    };
+}
+```
 
 ## Catatan implementasi
 
